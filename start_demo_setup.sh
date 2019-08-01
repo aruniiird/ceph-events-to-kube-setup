@@ -51,19 +51,19 @@ function create_virtual_disks() {
 
 function edit_yaml_files() {
   local yamlDir="$1"
-  [ -z "$yamlDir" ] && yamlDir="."
+  [ -z "${yamlDir}" ] && yamlDir="."
   # remove any '/'s at the end
   yamlDir="$(echo $yamlDir |sed -n 's@/*$@@gp')"
   local eachF=""
   for eachF in ${NEEDED_FILES[@]};do
-    [ ! -f "${yamlDir}/${eachF}" ] && echo "Unable to find : ${eachF}" && return 1
+    [ ! -f "${yamlDir}/${eachF}" ] && echo "Unable to find : ${yamlDir}/${eachF}" && return 1
   done
   if [ -z "$(sed -n '/^[[:space:]]*-[[:space:]]\+events/ p' ${yamlDir}/common.yaml)" ];then
     sed -i '/rook-ceph-mgr-cluster-rules/,/^---/ {
     /resources:/ a\  - events 
     }' ${yamlDir}/common.yaml
   fi
-  if [ "$(sed -n '/rook-ceph-mgr-cluster-rules/,/^---/ p' ${yamlDir}/common.yaml |sed -n '/verbs:/,/- get/ p' |sed -n '/- create/,/- patch/ p' |sed -n 's/^\s*\(- patch\)/\1/gp')" != "- patch" ];then
+  if [ "$(sed -n '/rook-ceph-mgr-cluster-rules/,/^---/ p' ${yamlDir}/common.yaml |sed -n '/verbs:/,/- get/ p' |sed -n '/- create/,/- patch/ p' |sed -n 's/^\s*\(- patch\).*/\1/gp')" != "- patch" ];then
     sed -i '/rook-ceph-mgr-cluster-rules/,/^---/ {
     /verbs:/ a\
   - create\
@@ -81,17 +81,19 @@ function edit_yaml_files() {
 }
 
 function setup_rook() {
-  [ -z "$ROOK_GITHUB_HOME" ] && git clone https://github.com/rook/rook.git && ROOK_GITHUB_HOME="$PWD/rook"
+  [ -z "$ROOK_GITHUB_HOME" ] && git clone https://github.com/rook/rook.git rook && ROOK_GITHUB_HOME="$PWD/rook"
   local cephExampleDir="$ROOK_GITHUB_HOME/cluster/examples/kubernetes/ceph"
   [ ! -f "${cephExampleDir}/common.yaml" ] && echo "Not a proper rook github clone ($ROOK_GITHUB_HOME)" && return 1
   local eachF=""
+  local yamlDir="yamlFiles"
+  [ ! -d "${yamlDir}" ] && mkdir "${yamlDir}"
   for eachF in ${NEEDED_FILES[@]};do
-    [ ! -f ${eachF} ] && cp ${cephExampleDir}/${eachF} .
+    [ ! -f ${yamlDir}/${eachF} ] && cp ${cephExampleDir}/${eachF} ${yamlDir}
   done
-  edit_yaml_files .
+  edit_yaml_files ${yamlDir}
   for eachF in ${NEEDED_FILES[@]};do
     echo "Checking ${eachF}..."
-    kubectl describe -f ${eachF} 1>/dev/null 2>&1 || { kubectl create -f ${eachF} && sleep 10s; }
+    kubectl describe -f ${yamlDir}/${eachF} 1>/dev/null 2>&1 || { kubectl create -f ${yamlDir}/${eachF} && sleep 10s; }
   done
 }
 
