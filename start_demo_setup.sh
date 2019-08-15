@@ -160,7 +160,6 @@ function help() {
   echo "-p <PROFILE_NAME>                 : argument will be used as profile to start the minikube instance"
   echo "-bp <BASE64_ENCODED_SUDO_PASSWORD>: base64 encoded sudo password"
   echo "-h | --help | -help               : prints this help"
-  echo "-h | --help | -help               : prints this help"
   echo "clean | cleanup                   : cleanup any previously created setup"
   echo ""
   echo "Environment variables"
